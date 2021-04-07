@@ -2,10 +2,11 @@
     "name": "visit-home",
     "displayName": "Visit Home",
     "description": "Easy to visit homepage of npm module",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "engines": {
         "vscode": "^1.55.0"
     },
+    "icon": "image/icon.png",
     "publisher": "avennn",
     "categories": [
         "Other"
@@ -65,5 +66,9 @@
     "author": {
         "name": "liangjianwen",
         "email": "914301050@qq.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/avennn/vscode-visit-home.git"
     }
 }
