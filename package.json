@@ -2,7 +2,7 @@
     "name": "visit-home",
     "displayName": "Visit Home",
     "description": "Easy to visit homepage of npm module",
-    "version": "0.0.2",
+    "version": "1.0.0",
     "engines": {
         "vscode": "^1.55.0"
     },
