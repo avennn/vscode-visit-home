@@ -2,7 +2,7 @@
     "name": "visit-home",
     "displayName": "Visit Home",
     "description": "Easy to visit homepage of npm module",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "engines": {
         "vscode": "^1.55.0"
     },
@@ -64,12 +64,17 @@
         "webpack-cli": "^4.4.0"
     },
     "author": {
-        "name": "liangjianwen",
+        "name": "Javen Leung",
         "email": "914301050@qq.com"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/avennn/vscode-visit-home.git"
+    },
+    "homepage": "https://marketplace.visualstudio.com/items?itemName=avennn.visit-home",
+    "bugs": {
+        "url": "https://github.com/avennn/vscode-visit-home/issues",
+        "email": "914301050@qq.com"
     },
     "license": "SEE LICENSE IN LICENSE"
 }
