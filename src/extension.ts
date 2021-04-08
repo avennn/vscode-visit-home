@@ -73,7 +73,7 @@ function trackPackageJson(
         );
         return json;
     } catch (e) {
-        showError(e);
+        // showError(e);
         return trackPackageJson(parentDirUri);
     }
 }
@@ -133,6 +133,13 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
                 const moduleName = textA || textB;
+                if (
+                    moduleName.startsWith('.') ||
+                    moduleName.startsWith('..') ||
+                    moduleName.startsWith('/')
+                ) {
+                    return;
+                }
                 const modulePath = await trackModulePath(
                     editor.document.fileName,
                     moduleName,
@@ -149,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 vscode.Uri.parse(homePage),
                             );
                         } catch (e) {
-                            showError(e);
+                            // showError(e);
                         }
                     }
                 }
