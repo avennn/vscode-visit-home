@@ -1,11 +1,17 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+const fs = require('fs');
+
+function showError(e: Error) {
+    console.error('[Visit Home] error: ', e);
+    vscode.window.showInformationMessage(e.message);
+}
 
 async function trackModulePath(
     fileName: string,
     moduleName: string,
-): Promise<string | vscode.Uri> {
+): Promise<'' | vscode.Uri> {
     if (!fileName) {
         return '';
     }
@@ -16,24 +22,73 @@ async function trackModulePath(
     const parentDirUri = vscode.Uri.file(
         fileName.substring(0, lastIndex === 0 ? 1 : lastIndex),
     );
-    console.log('parent dir uri: ', parentDirUri.path);
-    const fileList = await vscode.workspace.fs.readDirectory(parentDirUri);
-    console.log('file result: ', fileList);
-    const nm = fileList.find(
-        (item) => item[0] === 'node_modules' && item[1] === 2, // TODO: SymbolicLink
-    );
-    if (nm) {
-        const p = vscode.Uri.joinPath(
-            parentDirUri,
-            `node_modules/${moduleName}`,
+    try {
+        const fileList = await vscode.workspace.fs.readDirectory(parentDirUri);
+        const nm = fileList.find(
+            (item) => item[0] === 'node_modules' && item[1] === 2, // TODO: SymbolicLink
         );
-        console.log('module path: ', p);
-        return p;
+        if (nm) {
+            const p = vscode.Uri.joinPath(
+                parentDirUri,
+                `node_modules/${moduleName}`,
+            );
+            console.log('module path: ', p);
+            return p;
+        }
+    } catch (e) {
+        showError(e);
+        return '';
     }
     if (lastIndex === 0) {
         return '';
     }
     return await trackModulePath(parentDirUri.path, moduleName);
+}
+
+function trackPackageJson(
+    moduleUri: vscode.Uri,
+    times: number = 1,
+): null | string {
+    let parentDirUri = moduleUri;
+
+    if (times > 1) {
+        const lastIndex = moduleUri.path.lastIndexOf('/');
+        parentDirUri = vscode.Uri.file(moduleUri.path.substring(0, lastIndex));
+    }
+
+    if (
+        !parentDirUri.path.includes('node_modules') ||
+        parentDirUri.path.endsWith('node_modules')
+    ) {
+        return null;
+    }
+
+    try {
+        // const json = await vscode.workspace.fs.readFile(
+        //     vscode.Uri.joinPath(parentDirUri, 'package.json'),
+        // );
+        const json = fs.readFileSync(
+            vscode.Uri.joinPath(parentDirUri, 'package.json').path,
+            'utf8',
+        );
+        return json;
+    } catch (e) {
+        showError(e);
+        return trackPackageJson(parentDirUri);
+    }
+}
+
+function getHomePage(packageJson: Record<string, any>) {
+    if (packageJson.homepage) {
+        return packageJson.homepage;
+    }
+    if (packageJson.repository) {
+        if (typeof packageJson.repository === 'object') {
+            return packageJson.repository.url;
+        }
+        return packageJson.repository;
+    }
+    return '';
 }
 
 // this method is called when your extension is activated
@@ -54,89 +109,49 @@ export function activate(context: vscode.ExtensionContext) {
             const editor = vscode.window.activeTextEditor;
 
             if (editor) {
-                if (editor.selection.isEmpty) {
-                    // the Position object gives you the line and character where the cursor is
-                    const position = editor.selection.active;
-                    const rangeA = editor.document.getWordRangeAtPosition(
-                        position,
-                        /require\(['"].+['"]\)/,
-                    );
-                    const rangeB = editor.document.getWordRangeAtPosition(
-                        position,
-                        /from\s+['"].+['"]/,
-                    );
-                    let textA = rangeA ? editor.document.getText(rangeA) : '';
-                    let textB = rangeB ? editor.document.getText(rangeB) : '';
-                    if (textA) {
-                        const match = textA.match(/require\(['"](.+?)['"]\)/);
-                        if (match) {
-                            textA = match[1];
-                        }
-                    } else if (textB) {
-                        const match = textB.match(/from\s+['"](.+?)['"]/);
-                        if (match) {
-                            textB = match[1];
+                // the Position object gives you the line and character where the cursor is
+                const position = editor.selection.active;
+                const rangeA = editor.document.getWordRangeAtPosition(
+                    position,
+                    /require\(['"].+['"]\)/,
+                );
+                const rangeB = editor.document.getWordRangeAtPosition(
+                    position,
+                    /from\s+['"].+['"]/,
+                );
+                let textA = rangeA ? editor.document.getText(rangeA) : '';
+                let textB = rangeB ? editor.document.getText(rangeB) : '';
+                if (textA) {
+                    const match = textA.match(/require\(['"](.+?)['"]\)/);
+                    if (match) {
+                        textA = match[1];
+                    }
+                } else if (textB) {
+                    const match = textB.match(/from\s+['"](.+?)['"]/);
+                    if (match) {
+                        textB = match[1];
+                    }
+                }
+                const moduleName = textA || textB;
+                const modulePath = await trackModulePath(
+                    editor.document.fileName,
+                    moduleName,
+                );
+                if (modulePath) {
+                    const jsonText = trackPackageJson(modulePath);
+                    if (jsonText) {
+                        try {
+                            const json = JSON.parse(jsonText);
+                            const homePage = getHomePage(json);
+                            console.log('homepage', homePage);
+                            // TODO: add a toast?
+                            await vscode.env.openExternal(
+                                vscode.Uri.parse(homePage),
+                            );
+                        } catch (e) {
+                            showError(e);
                         }
                     }
-                    const moduleName = textA || textB;
-
-                    // let lastIndex = editor.document.fileName.lastIndexOf('/');
-                    // let parentDirUri = vscode.Uri.file(
-                    //     editor.document.fileName.substring(0, lastIndex),
-                    // );
-                    // console.log(
-                    //     'parentDirUri',
-                    //     editor.document.fileName,
-                    //     lastIndex,
-                    //     parentDirUri,
-                    // );
-                    // vscode.workspace.fs
-                    //     .readDirectory(parentDirUri)
-                    //     .then((fileList) => {
-                    //         console.log('file result: ', fileList);
-                    //         const nm = fileList.find(
-                    //             (item) =>
-                    //                 item[0] === 'node_modules' && item[1] === 2,
-                    //         );
-                    //         if (nm) {
-                    //             let p = vscode.Uri.joinPath(
-                    //                 parentDirUri,
-                    //                 `node_modules/${moduleName}`,
-                    //             );
-                    //             console.log('module name1: ', p);
-                    //         } else {
-                    //             lastIndex = parentDirUri.path.lastIndexOf('/');
-                    //             parentDirUri = vscode.Uri.file(
-                    //                 parentDirUri.path.substring(0, lastIndex),
-                    //             );
-                    //             vscode.workspace.fs
-                    //                 .readDirectory(parentDirUri)
-                    //                 .then((fileList) => {
-                    //                     const nm = fileList.find(
-                    //                         (item) =>
-                    //                             item[0] === 'node_modules' &&
-                    //                             item[1] === 2,
-                    //                     );
-                    //                     if (nm) {
-                    //                         let p = vscode.Uri.joinPath(
-                    //                             parentDirUri,
-                    //                             `node_modules/${moduleName}`,
-                    //                         );
-                    //                         console.log('module name2: ', p);
-                    //                     }
-                    //                 });
-                    //         }
-                    //     });
-
-                    const modulePath = await trackModulePath(
-                        editor.document.fileName,
-                        moduleName,
-                    );
-                    console.log('module path: ', modulePath);
-                    console.log(
-                        'workspace: ',
-                        vscode.workspace.workspaceFolders,
-                    );
                 }
             }
         },
