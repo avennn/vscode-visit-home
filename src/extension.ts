@@ -74,7 +74,7 @@ function trackPackageJson(
         return json;
     } catch (e) {
         // showError(e);
-        return trackPackageJson(parentDirUri);
+        return trackPackageJson(parentDirUri, times + 1);
     }
 }
 
