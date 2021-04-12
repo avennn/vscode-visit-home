@@ -18,3 +18,7 @@ Welcome to contact me with email 914301050@qq.com
 ## License
 
 [MIT](./LICENSE)
+
+## Todo List
+
+-   tranform repository to valid url
