@@ -3,6 +3,11 @@
 import * as vscode from 'vscode';
 const fs = require('fs');
 
+interface RepositoryObj {
+    type: string;
+    url: string;
+}
+
 function showError(e: Error) {
     console.error('[Visit Home] error: ', e);
     vscode.window.showInformationMessage(e.message);
@@ -78,17 +83,35 @@ function trackPackageJson(
     }
 }
 
+/**
+ * TODO
+ * conditions:
+ * 1. https://github.com/babel/babel.git
+ * 2. git@github.com:facebook/react-native.git
+ * 3. git+ssh://git@github.com/afc163/array-tree-filter.git
+ */
+function getHomeUrlFromRepository(repo: RepositoryObj | string | undefined) {
+    let url = typeof repo === 'object' ? repo.url : repo;
+    url = url || '';
+    if (url.startsWith('http')) {
+        return url;
+    }
+    const matched = url.match(/git@github\.com[:\/](.+)\.git/);
+    if (matched) {
+        const name = matched[1];
+        return `https://github.com/${name}`;
+    }
+    if (/^[^:\/]+\/[^:\/]+$/.test(url)) {
+        return `https://github.com/${url}`;
+    }
+    return url;
+}
+
 function getHomePage(packageJson: Record<string, any>) {
     if (packageJson.homepage) {
         return packageJson.homepage;
     }
-    if (packageJson.repository) {
-        if (typeof packageJson.repository === 'object') {
-            return packageJson.repository.url;
-        }
-        return packageJson.repository;
-    }
-    return '';
+    return getHomeUrlFromRepository(packageJson.repository);
 }
 
 // this method is called when your extension is activated

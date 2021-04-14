@@ -11,14 +11,10 @@ Click module name (in pattern of esm import or cmjs require) in current text edi
 
 ## Author
 
-<strong>Javen Leung</strong>
+name: Javen Leung
 
-Welcome to contact me with email 914301050@qq.com
+email: 914301050@qq.com
 
 ## License
 
 [MIT](./LICENSE)
-
-## Todo List
-
--   tranform repository to valid url
